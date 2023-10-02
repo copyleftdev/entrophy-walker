@@ -32,13 +32,16 @@ fn process_file(filepath: &Path, entropy_dict: &Mutex<HashMap<String, Vec<(f64, 
             let entropy = shannon_entropy(word);
             if entropy > 3.0 {
                 let mut dict = entropy_dict.lock().unwrap();
-                dict.entry(word.to_string())
-                    .or_insert_with(Vec::new)
-                    .push((entropy, filepath.to_str().unwrap().to_string()));
+                let entry = dict.entry(word.to_string()).or_insert_with(Vec::new);
+                let file_str = filepath.to_str().unwrap().to_string();
+                if !entry.contains(&(entropy, file_str.clone())) {
+                    entry.push((entropy, file_str));
+                }
             }
         }
     }
 }
+
 
 
 fn main() {
