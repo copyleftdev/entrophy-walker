@@ -45,7 +45,6 @@ fn process_file(filepath: &Path, entropy_dict: &Mutex<HashMap<String, Vec<(f64, 
 
 
 fn main() {
-        // Display the banner
         println!(r#"
 
         ███████ ███    ██ ████████ ██████   ██████  ██████  ██   ██ ██    ██       ██     ██  █████  ██      ██   ██ ███████ ██████  
