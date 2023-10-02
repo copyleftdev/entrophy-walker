@@ -1,10 +1,11 @@
 extern crate clap;
 extern crate rayon;
 extern crate colored;
-
+extern crate regex;
 
 use clap::{App, Arg};
 use rayon::prelude::*;
+use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -26,35 +27,35 @@ fn shannon_entropy(s: &str) -> f64 {
         .sum()
 }
 
-fn process_file(filepath: &Path, entropy_dict: &Mutex<HashMap<String, Vec<(f64, String)>>>) {
+fn process_file(filepath: &Path, entropy_dict: &Mutex<HashMap<String, Vec<(f64, String)>>>, regex_filter: &Regex) {
     if let Ok(content) = fs::read_to_string(filepath) {
         for word in content.split_whitespace() {
-            let entropy = shannon_entropy(word);
-            if entropy > 3.0 {
-                let mut dict = entropy_dict.lock().unwrap();
-                let entry = dict.entry(word.to_string()).or_insert_with(Vec::new);
-                let file_str = filepath.to_str().unwrap().to_string();
-                if !entry.contains(&(entropy, file_str.clone())) {
-                    entry.push((entropy, file_str));
+            if regex_filter.is_match(word) {
+                let entropy = shannon_entropy(word);
+                if entropy > 3.0 {
+                    let mut dict = entropy_dict.lock().unwrap();
+                    let entry = dict.entry(word.to_string()).or_insert_with(Vec::new);
+                    let file_str = filepath.to_str().unwrap().to_string();
+                    if !entry.contains(&(entropy, file_str.clone())) {
+                        entry.push((entropy, file_str));
+                    }
                 }
             }
         }
     }
 }
 
-
-
 fn main() {
-        println!(r#"
+    println!(r#"
 
-        ███████ ███    ██ ████████ ██████   ██████  ██████  ██   ██ ██    ██       ██     ██  █████  ██      ██   ██ ███████ ██████  
-        ██      ████   ██    ██    ██   ██ ██    ██ ██   ██ ██   ██  ██  ██        ██     ██ ██   ██ ██      ██  ██  ██      ██   ██ 
-        █████   ██ ██  ██    ██    ██████  ██    ██ ██████  ███████   ████   █████ ██  █  ██ ███████ ██      █████   █████   ██████  
-        ██      ██  ██ ██    ██    ██   ██ ██    ██ ██      ██   ██    ██          ██ ███ ██ ██   ██ ██      ██  ██  ██      ██   ██ 
-        ███████ ██   ████    ██    ██   ██  ██████  ██      ██   ██    ██           ███ ███  ██   ██ ███████ ██   ██ ███████ ██   ██ 
-                                                                                                                                     
-                                                                                                                                     
-    Created By 1337-SIGMA                                                    
+    ███████ ███    ██ ████████ ██████   ██████  ██████  ██   ██ ██    ██       ██     ██  █████  ██      ██   ██ ███████ ██████  
+    ██      ████   ██    ██    ██   ██ ██    ██ ██   ██ ██   ██  ██  ██        ██     ██ ██   ██ ██      ██  ██  ██      ██   ██ 
+    █████   ██ ██  ██    ██    ██████  ██    ██ ██████  ███████   ████   █████ ██  █  ██ ███████ ██      █████   █████   ██████  
+    ██      ██  ██ ██    ██    ██   ██ ██    ██ ██      ██   ██    ██          ██ ███ ██ ██   ██ ██      ██  ██  ██      ██   ██ 
+    ███████ ██   ████    ██    ██   ██  ██████  ██      ██   ██    ██           ███ ███  ██   ██ ███████ ██   ██ ███████ ██   ██ 
+                                                                                                                                 
+                                                                                                                                 
+Created By 1337-SIGMA                                                    
 "#);
     let matches = App::new("Entropy Finder")
         .version("1.0")
@@ -78,6 +79,15 @@ fn main() {
                 .required(false)
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("pattern")
+                .short("p")
+                .long("pattern")
+                .value_name("PATTERN")
+                .help("Sets the regex pattern for filtering words")
+                .required(false)
+                .takes_value(true),
+        )
         .get_matches();
 
     let directory = matches.value_of("directory").unwrap();
@@ -86,6 +96,8 @@ fn main() {
         .unwrap_or("3.0")
         .parse()
         .expect("Failed to parse entropy threshold");
+    let pattern = matches.value_of("pattern").unwrap_or(".*");
+    let regex_filter = Regex::new(pattern).expect("Invalid regex pattern");
 
     let entropy_dict = Arc::new(Mutex::new(HashMap::new()));
 
@@ -97,7 +109,7 @@ fn main() {
 
     let entropy_dict_clone = entropy_dict.clone();
     paths.par_iter().for_each(|path| {
-        process_file(path, &entropy_dict_clone);
+        process_file(path, &entropy_dict_clone, &regex_filter);
     });
 
     println!("{}", "High Entropy Strings:".green().bold());

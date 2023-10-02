@@ -48,11 +48,12 @@ Entropy Walker is a high-performance security tool that finds high entropy strin
 Run the program with the following command:
 
 ```bash
-./target/release/entropy-walker --directory /path/to/directory --entropy 3.0
+./target/release/entropy-walker --directory /path/to/directory --entropy 3.0 --pattern "(pattern)"
 ```
 
 - `--directory`: The directory to scan.
 - `--entropy`: Optional. The entropy threshold. Default is 3.0.
+- `--pattern`: Optional. A regex pattern to filter files.
 
 ---
 
